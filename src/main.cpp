@@ -180,28 +180,36 @@ void deleteTree(Node *node) {
   }
   delete node;
 }
-int minMaxAlgorithm(Node *node, int depth, bool isMaximizingPlayer) {
-  if (depth == 0 || node->children.empty()) {
+int minMaxAlgorithm(Node *node, int depth, bool isMaximizingPlayer, int alpha, int beta) {
+  if (depth == 0 || node->children.size() == 0) {
     return node->value;
   }
+
   if (isMaximizingPlayer) {
-    int maxEval = -10000;
+    int maxEval = INT_MIN;
     for (Node *child : node->children) {
-      int eval = minMaxAlgorithm(child, depth - 1, false);
+      int eval = minMaxAlgorithm(child, depth - 1, false, alpha, beta);
       if (eval > maxEval) {
         maxEval = eval;
         if (depth == profundidad) {
           bestMove = child->board;
         }
       }
+      alpha = max(alpha, eval);
+      if (beta <= alpha) {
+        break;
+      }
     }
-
     return maxEval;
   } else {
-    int minEval = 10000;
+    int minEval = INT_MAX;
     for (Node *child : node->children) {
-      int eval = minMaxAlgorithm(child, depth - 1, true);
+      int eval = minMaxAlgorithm(child, depth - 1, true, alpha, beta);
       minEval = min(minEval, eval);
+      beta = min(beta, eval);
+      if (beta <= alpha) {
+        break;
+      }
     }
     return minEval;
   }
@@ -260,6 +268,12 @@ int button8Y = 200;
 int button8Width = 100;
 int button8Height = 50;
 const char *button8Text = "8x8";
+
+int buttonRX = 50;
+int buttonRY = 750;
+int buttonRWidth = 100;
+int buttonRHeight = 50;
+const char *buttonRText = "Restart";
 void drawText(float x, float y, string text, float color[3]) {
   glColor3fv(color);
   glRasterPos2f(x, y);
@@ -374,7 +388,7 @@ void mouseClick(int button, int state, int x, int y) {
         root = createBinaryTree(board, true, profundidad);
         buttonsVisible = false;
         computerstarts = true;
-        int temp = minMaxAlgorithm(root, profundidad, true);
+        int temp = minMaxAlgorithm(root, profundidad, true, INT_MIN, INT_MAX);
         board = bestMove;
         moves++;
         glutPostRedisplay();
@@ -472,13 +486,13 @@ void display() {
   if (moves % 2 != 0 && !buttonsVisible && !computerstarts && moves < n_value * n_value &&
       !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
-    int temp = minMaxAlgorithm(root, profundidad, true);
+    int temp = minMaxAlgorithm(root, profundidad, true, INT_MIN, INT_MAX);
     board = bestMove;
     moves++;
   } else if (moves % 2 == 0 && !buttonsVisible && computerstarts && moves < n_value * n_value &&
              !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
-    int temp = minMaxAlgorithm(root, profundidad, true);
+    int temp = minMaxAlgorithm(root, profundidad, true, INT_MIN, INT_MAX);
     board = bestMove;
     moves++;
   }
