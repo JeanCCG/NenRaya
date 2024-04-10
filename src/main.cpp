@@ -13,7 +13,7 @@ using namespace std;
 struct Node {
   vector<vector<int>> board;
   int value;
-  int winner = 0;
+
   vector<Node *> children;
 };
 Node *tree = nullptr;
@@ -85,9 +85,6 @@ int calculatePossibilities(Node &node, int player) {
     }
     if (possible) {
       possibilities++;
-      if (count(node.board[i].begin(), node.board[i].end(), player) == boardSize) {
-        node.winner = player;
-      }
     }
   }
   // Columnas
@@ -99,15 +96,9 @@ int calculatePossibilities(Node &node, int player) {
         possible = false;
         break;
       }
-      if (node.board[j][i] == player) {
-        countPlayer++;
-      }
     }
     if (possible) {
       possibilities++;
-      if (countPlayer == boardSize) {
-        node.winner = player;
-      }
     }
   }
   // Diagonales
@@ -118,15 +109,9 @@ int calculatePossibilities(Node &node, int player) {
       possible = false;
       break;
     }
-    if (node.board[i][i] == player) {
-      countPlayer++;
-    }
   }
   if (possible) {
     possibilities++;
-    if (countPlayer == boardSize) {
-      node.winner = player;
-    }
   }
   possible = true;
   countPlayer = 0;
@@ -135,92 +120,54 @@ int calculatePossibilities(Node &node, int player) {
       possible = false;
       break;
     }
-    if (node.board[i][boardSize - i - 1] == player) {
-      countPlayer++;
-    }
   }
   if (possible) {
     possibilities++;
-    if (countPlayer == boardSize) {
-      node.winner = player;
-    }
   }
 
   return possibilities;
 }
-int calculateValue(Node &node, int player) {
-  int result = 0;
-  int boardSize = node.board.size();
-  // Filas
-  for (int i = 0; i < boardSize; i++) {
-    bool possible = true;
-    for (int j = 0; j < boardSize; j++) {
-      if (node.board[i][j] != player) {
-        possible = false;
-        break;
-      }
-    }
-    if (possible) {
-      result = 1;
-      node.winner = player;
+int checkWinner(const vector<vector<int>> &board) {
+  int n = board.size();
+  for (int i = 0; i < n; i++) {
+    if (all_of(board[i].begin(), board[i].end(),
+               [&](int j) { return j == board[i][0] && j != 0; })) {
+      return board[i][0];
     }
   }
-  // Columnas
-  for (int i = 0; i < boardSize; i++) {
-    bool possible = true;
-    for (int j = 0; j < boardSize; j++) {
-      if (node.board[j][i] != player) {
-        possible = false;
-        break;
-      }
-    }
-    if (possible) {
-      result = 1;
-      node.winner = player;
+  for (int i = 0; i < n; i++) {
+    if (all_of(board.begin(), board.end(),
+               [&](const vector<int> &row) { return row[i] == board[0][i] && row[i] != 0; })) {
+      return board[0][i];
     }
   }
-  // Diagonales
-  bool possible = true;
-  for (int i = 0; i < boardSize; i++) {
-    if (node.board[i][i] != player) {
-      possible = false;
-      break;
-    }
+  if (all_of(board.begin(), board.end(), [&](const vector<int> &row) {
+        int i = &row - &board[0];
+        return row[i] == board[0][0] && row[i] != 0;
+      })) {
+    return board[0][0];
   }
-  if (possible) {
-    result = 1;
-    node.winner = player;
+  if (all_of(board.begin(), board.end(), [&](const vector<int> &row) {
+        int i = &row - &board[0];
+        return row[n - 1 - i] == board[0][n - 1] && row[n - 1 - i] != 0;
+      })) {
+    return board[0][n - 1];
   }
-  possible = true;
-  for (int i = 0; i < boardSize; i++) {
-    if (node.board[i][boardSize - i - 1] != player) {
-      possible = false;
-      break;
-    }
-  }
-  if (possible) {
-    result = 1;
-    node.winner = player;
-  }
-  return result;
+  return 0;
 }
-
 Node *createBinaryTree(vector<vector<int>> board, bool player, int depth) {
   Node *node = new Node();
   node->board = board;
-  node->winner = 0;
   node->value = calculatePossibilities(*node, 1) - calculatePossibilities(*node, 2);
-  // node->value = calculateValue(*node, 1) - calculateValue(*node, 2);
-  if (node->winner != 0) {
+  if (depth == 0 || checkWinner(board) != 0) {
     return node;
   }
-  if (depth > 0) {
-    // Generar todas las posibles jugadas y crear nodos hijos
-    vector<vector<vector<int>>> possibleMoves = generatePossibleMoves(board, player);
-    for (const auto &move : possibleMoves) {
-      Node *childNode = createBinaryTree(move, !player, depth - 1);
-      node->children.push_back(childNode);
-    }
+
+  // node->value = calculateValue(*node, 1) - calculateValue(*node, 2);
+  vector<vector<vector<int>>> possibleMoves = generatePossibleMoves(board, player);
+  for (const auto &move : possibleMoves) {
+    Node *childNode = createBinaryTree(move, !player, depth - 1);
+    node->children.push_back(childNode);
   }
   return node;
 }
@@ -258,20 +205,7 @@ int minMaxAlgorithm(Node *node, int depth, bool isMaximizingPlayer) {
     }
     return minEval;
   }
-} /*
- vector<vector<int>> bestMove(Node *node, int depth) {
-   vector<vector<int>> bestBoard;
-   int bestValue = -10000;
-   for (Node *child : node->children) {
-     int eval = minMaxAlgorithm(child, depth, true);
-     if (eval > bestValue) {
-       bestValue = eval;
-       bestBoard = child->board;
-     }
-   }
-
-   return bestBoard;
- }*/
+}
 int windowWidth = 1600;
 int windowHeight = 900;
 int boardSize = windowWidth / 2;
@@ -296,12 +230,36 @@ const char *button1Text = "Player starts";
 const char *button2Text = "Computer starts";
 const char *buttonSubmit = "Submit";
 // Define the positions, dimensions, and texts of the new buttons
-int button3X = 50, button3Y = 200, button3Width = 100, button3Height = 50;
+int button3X = 50;
+int button3Y = 100;
+int button3Width = 100;
+int button3Height = 50;
 const char *button3Text = "3x3";
-int button4X = 200, button4Y = 200, button4Width = 100, button4Height = 50;
+int button4X = 200;
+int button4Y = 100;
+int button4Width = 100;
+int button4Height = 50;
 const char *button4Text = "4x4";
-int button5X = 350, button5Y = 200, button5Width = 100, button5Height = 50;
+int button5X = 350;
+int button5Y = 100;
+int button5Width = 100;
+int button5Height = 50;
 const char *button5Text = "5x5";
+int button6X = 50;
+int button6Y = 200;
+int button6Width = 100;
+int button6Height = 50;
+const char *button6Text = "6x6";
+int button7X = 200;
+int button7Y = 200;
+int button7Width = 100;
+int button7Height = 50;
+const char *button7Text = "7x7";
+int button8X = 350;
+int button8Y = 200;
+int button8Width = 100;
+int button8Height = 50;
+const char *button8Text = "8x8";
 void drawText(float x, float y, string text, float color[3]) {
   glColor3fv(color);
   glRasterPos2f(x, y);
@@ -397,6 +355,7 @@ bool areEqual(const std::vector<std::vector<int>> &vec1,
   }
   return true;
 }
+
 void mouseClick(int button, int state, int x, int y) {
   if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
     if (x >= submitButtonX && x <= submitButtonX + submitButtonWidth && y >= submitButtonY &&
@@ -408,24 +367,15 @@ void mouseClick(int button, int state, int x, int y) {
           y <= button1Y + button1Height) {
         // Player 1 starts
         buttonsVisible = false;
-        root = createBinaryTree(board, false, profundidad);
-        tree = root;
         glutPostRedisplay();
       } else if (x >= button2X && x <= button2X + button2Width && y >= button2Y &&
                  y <= button2Y + button2Height) {
         // Computer starts
         root = createBinaryTree(board, true, profundidad);
-        tree = root;
         buttonsVisible = false;
         computerstarts = true;
         int temp = minMaxAlgorithm(root, profundidad, true);
-        board = bestMove; /*
-         for (Node *child : root->children) {
-           if (areEqual(board, child->board)) {
-             root = child;
-             break;
-           }
-         }*/
+        board = bestMove;
         moves++;
         glutPostRedisplay();
       } else if (x >= button3X && x <= button3X + button3Width && y >= button3Y &&
@@ -463,20 +413,52 @@ void mouseClick(int button, int state, int x, int y) {
         }
         glutPostRedisplay();
       }
+      // Check if 6x6 button is clicked
+      else if (x >= button6X && x <= button6X + button6Width && y >= button6Y &&
+               y <= button6Y + button6Height) {
+        n_value = 6;
+        boardvisible = true;
+        cellSize = boardSize / n_value;
+        board.clear();
+        for (int i = 0; i < n_value; i++) {
+          board.push_back(vector<int>(n_value, 0));
+        }
+        glutPostRedisplay();
+      }
+      // Check if 7x7 button is clicked
+      else if (x >= button7X && x <= button7X + button7Width && y >= button7Y &&
+               y <= button7Y + button7Height) {
+        n_value = 7;
+        boardvisible = true;
+        cellSize = boardSize / n_value;
+        board.clear();
+        for (int i = 0; i < n_value; i++) {
+          board.push_back(vector<int>(n_value, 0));
+        }
+        glutPostRedisplay();
+      }
+      // Check if 8x8 button is clicked
+      else if (x >= button8X && x <= button8X + button8Width && y >= button8Y &&
+               y <= button8Y + button8Height) {
+        n_value = 8;
+        boardvisible = true;
+        cellSize = boardSize / n_value;
+        board.clear();
+        for (int i = 0; i < n_value; i++) {
+          board.push_back(vector<int>(n_value, 0));
+        }
+        glutPostRedisplay();
+      }
     } else {
       int boardX = (x - startX) / cellSize;
       int boardY = (y - startY) / cellSize;
       if (boardX >= 0 && boardX < n_value && boardY >= 0 && boardY < n_value) {
         if (board[boardY][boardX] == 0) {
           // Actualizar la celda con una O
-          board[boardY][boardX] = 2; /*
-           for (Node *child : root->children) {
-             if (areEqual(board, child->board)) {
-               root = child;
-               break;
-             }
-           }*/
-          moves++;
+          if (!checkWinner(board)) {
+            board[boardY][boardX] = 2;
+            moves++;
+          }
           glutPostRedisplay();
         }
       }
@@ -487,38 +469,24 @@ void mouseClick(int button, int state, int x, int y) {
 void display() {
   glClear(GL_COLOR_BUFFER_BIT);
   // Jugadas de la computadora
-  if ((root && root->winner == 0) && moves % 2 != 0 && !buttonsVisible && !computerstarts &&
-      moves < n_value * n_value) { /*
-     int temp = minMaxAlgorithm(root, profundidad, true);
-     board = bestMove;
-     for (Node *child : root->children) {
-       if (areEqual(board, child->board)) {
-         root = child;
-       }
-     }*/
+  if (moves % 2 != 0 && !buttonsVisible && !computerstarts && moves < n_value * n_value &&
+      !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
     int temp = minMaxAlgorithm(root, profundidad, true);
     board = bestMove;
     moves++;
-  } else if ((root && root->winner == 0) && moves % 2 == 0 && !buttonsVisible && computerstarts &&
-             moves < n_value * n_value) { /*
-     int temp = minMaxAlgorithm(root, profundidad, true);
-     board = bestMove;
-     for (Node *child : root->children) {
-       if (areEqual(board, child->board)) {
-         root = child;
-       }
-     }*/
+  } else if (moves % 2 == 0 && !buttonsVisible && computerstarts && moves < n_value * n_value &&
+             !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
     int temp = minMaxAlgorithm(root, profundidad, true);
     board = bestMove;
     moves++;
   }
-  if (moves == n_value * n_value || (root && root->winner != 0)) {
-    if (root->winner == 0)
+  if (moves == n_value * n_value || checkWinner(board) != 0) {
+    if (!checkWinner(board))
       drawText(button2X, button2Y, "Draw", colors[0]);
     else
-      drawText(button2X, button2Y, (root->winner == 1) ? "Computer Wins" : "Player Wins",
+      drawText(button2X, button2Y, checkWinner(board) == 1 ? "Computer Wins" : "Player Wins",
                colors[0]);
   }
   if (boardvisible) {
@@ -533,6 +501,9 @@ void display() {
   drawButton(button3X, button3Y, button3Width, button3Height, button3Text, colors[1]);
   drawButton(button4X, button4Y, button4Width, button4Height, button4Text, colors[1]);
   drawButton(button5X, button5Y, button5Width, button5Height, button5Text, colors[1]);
+  drawButton(button6X, button6Y, button6Width, button6Height, button6Text, colors[1]);
+  drawButton(button7X, button7Y, button7Width, button7Height, button7Text, colors[1]);
+  drawButton(button8X, button8Y, button8Width, button8Height, button8Text, colors[1]);
   drawText(textBoxX, textBoxY + 50, "Profundidad: " + toString(profundidad), colors[0]);
   drawButton(submitButtonX, submitButtonY, submitButtonWidth, submitButtonHeight, buttonSubmit,
              colors[1]);
