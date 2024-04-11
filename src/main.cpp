@@ -19,10 +19,11 @@ struct Node {
 Node *tree = nullptr;
 Node *root = nullptr;
 vector<vector<int>> board = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+vector<vector<int>> valores = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 vector<vector<int>> bestMove = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 int moves = 0;
 int n_value = 3;
-int profundidad = 9;
+int profundidad = 3;
 bool boardvisible = false;
 // Función para convertir una variable a string
 template <typename T>
@@ -39,6 +40,7 @@ int textBoxX = 20;
 int textBoxY = 25;
 int textBoxWidth = 200;
 int textBoxHeight = 30;
+int valorfuncion = 0;
 // Colores
 float colors[5][3] = {
     {1.0f, 1.0f, 1.0f},  // Blanco
@@ -171,15 +173,7 @@ Node *createBinaryTree(vector<vector<int>> board, bool player, int depth) {
   }
   return node;
 }
-void deleteTree(Node *node) {
-  if (node == nullptr) {
-    return;
-  }
-  for (Node *child : node->children) {
-    deleteTree(child);
-  }
-  delete node;
-}
+
 int minMaxAlgorithm(Node *node, int depth, bool isMaximizingPlayer, int alpha, int beta) {
   if (depth == 0 || node->children.size() == 0) {
     return node->value;
@@ -487,12 +481,14 @@ void display() {
       !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
     int temp = minMaxAlgorithm(root, profundidad, true, INT_MIN, INT_MAX);
+    valorfuncion = temp;
     board = bestMove;
     moves++;
   } else if (moves % 2 == 0 && !buttonsVisible && computerstarts && moves < n_value * n_value &&
              !checkWinner(board)) {
     root = createBinaryTree(board, true, profundidad);
     int temp = minMaxAlgorithm(root, profundidad, true, INT_MIN, INT_MAX);
+    valorfuncion = temp;
     board = bestMove;
     moves++;
   }
@@ -522,6 +518,7 @@ void display() {
   drawButton(submitButtonX, submitButtonY, submitButtonWidth, submitButtonHeight, buttonSubmit,
              colors[1]);
   drawText(textBoxX + 5, textBoxY + 5, "Ingrese: " + percentageInput, colors[0]);
+  drawText(button2X + 100, button2Y, toString(valorfuncion), colors[0]);
   glutSwapBuffers();
 }
 
